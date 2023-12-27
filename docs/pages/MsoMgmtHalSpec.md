@@ -20,20 +20,15 @@ MsoMgmt HAL is an abstraction layer implemented to interact with vendor software
 
 There are no dependent APIs expected to be initialized for invoking the MsoMgmt HAL client module.
 
-RDK MsoMgmt HAL doesn't mandate any predefined requirements for the implementation of these APIs. It is up to the
-3rd party vendors to handle it appropriately to meet operational requirements.
-
-Independent API's 3rd party implementation is expected to work without any prerequisites.
-
-Failure to meet these requirements will likely result in undefined and unexpected behavior.
-
+3rd party vendors will implement appropriately to meet operational requirements. This interface is expected to block if the hardware is not ready.
+ 
 ## Threading Model
 
 The interface is not thread safe.
 
 Any module that invokes the API should ensure calls are made in a thread-safe manner.
 
-Different 3rd party vendors are allowed to create internal threads to meet the operational requirements. In this case, 3rd party implementations should be responsible for synchronizing between the calls and events and cleaning up the thread.
+Vendors can create internal threads/events to meet their operation requirements. These should be responsible to synchronize between the calls, events and cleaned up on closure.
 
 ## Process Model
 
@@ -43,8 +38,11 @@ All APIs are expected to be called from multiple processes.
 
 The client is responsible for allocating and de-allocating memory for necessary APIs as specified in API documentation.
 
-Different 3rd party vendors are allowed to allocate memory for internal operational requirements. In this case, 3rd party implementations should be responsible for de-allocating memory internally.
+Different 3rd party vendors are allowed to allocate memory for internal operational requirements. In this case, 3rd party implementations should be responsible to deallocate internally.
 
+TODO:
+State a footprint requirement. Example: This should not exceed XXXX KB.
+ 
 ## Power Management Requirements
 
 The HAL is not involved in any of the power management operations.
@@ -61,6 +59,11 @@ The API's are expected to work synchronously and should complete within a time p
 
 Any calls that can fail due to the lack of a response should have a timeout period in accordance with any API documentation.
 
+The upper layers will call this API from a single thread context, this API should not suspend.
+
+TODO:
+As we state that they should complete within a time period, we need to state what that time target is, and pull it from the spec if required. Define the timeout requirement.
+
 ## Internal Error Handling
 
 All the MsoMgmt HAL APIs should return errors synchronously as a return argument. HAL is responsible for handling system errors (e.g., out of memory) internally.
@@ -75,11 +78,11 @@ Following non functional requirement should be supported by the component.
 
 ## Logging and debugging requirements
 
-The component should log all the errors and critical informative messages, which helps to debug or triage the issues and understand the functional flow of the system.
+The component should log all the error and critical informative messages, preferably using syslog, printf which helps to debug/triage the issues and understand the functional flow of the system.
 
 The logging should be consistent across all HAL components.
 
-If the vendor is going to log, then it has to be logged in the `xxx_vendor_hal.log` file name.
+IIf the vendor is going to log then it has to be logged in `xxx_vendor_hal.log` file name which can be placed in `/rdklogs/logs/` or `/var/tmp/` directory.
 
 Logging should be defined with log levels as per Linux standard logging.
 
@@ -89,8 +92,8 @@ The component should not contribute more to memory and CPU utilization while per
 
 ## Quality Control
 
-MsoMgmt HAL implementation should pass `Coverity`, `Black duck`, `Valgrind` checks without any issue.
-
+MsoMgmt HAL implementation should pass checks using any third party tools like `Coverity`, `Black duck`, `Valgrind` etc. without any issue to ensure quality.
+ 
 There should not be any memory leaks or corruption introduced by HAL and underneath 3rd party software implementation.
 
 ## Licensing
@@ -99,11 +102,11 @@ MsoMgmt HAL implementation is expected to be released under the Apache License 2
 
 ## Build Requirements
 
-The source code should be built under the Linux Yocto environment and delivered as a shared library named `libhal_msomgmt.so`
+The source code should be able to be built under Linux Yocto environment and should be delivered as a shared library `libhal_msomgmt.so`
 
 ## Variability Management
 
-Any new API introduced should be implemented by all the 3rd party modules, and RDK generic code should be compatible with specific versions of HAL software.
+Changes to the interface will be controlled by versioning, vendors will be expected to implement to a fixed version of the interface, and based on SLA agreements move to later versions as demand requires.
 
 Each API interface will be versioned using [Semantic Versioning 2.0.0](https://semver.org/), the vendor code will comply with a specific version of the interface.
 

@@ -134,6 +134,15 @@ mso_pwd_ret_status;
  */
 
 
+/*
+ * TODO:
+ *
+ * 1. Extend the return codes by listing out the possible reasons of failure, to improve the interface in the future.
+ *    This was reported during the review for header file migration to opensource github.
+ *
+ */
+
+ 
 /* mso_validatepwd() function */
 /**
 * @description Validate whether the password passed in matches the password of the day for mso user.
@@ -165,9 +174,7 @@ mso_pwd_ret_status mso_validatepwd(char *pwd);
 *
 * @execution Synchronous.
 *
-* @note This function must not suspend and must not invoke any blocking system 
-*       calls. It should probably just send a message to a driver event handler task. 
-*       Newer Broadband Devices MUST decrypt the seed on demand when this HAL is called.
+* @note Newer Broadband Devices MUST decrypt the seed on demand when this HAL is called.
 */
 INT mso_set_pod_seed(char *pSeed);
 
