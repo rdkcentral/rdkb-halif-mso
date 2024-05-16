@@ -17,12 +17,22 @@
  * limitations under the License.
 */
 
-/**
-* @file mso_mgmt_hal.h
-* @brief MSO Management HAL
+/**!
 *
-* @description This header file gives the function call prototypes and structure definitions used for the RDK-Broadband
-* hardware abstraction layer for MSO Management.
+* @file mso_mgmt_hal.h
+* @brief MSO Management Hardware Abstraction Layer (HAL)
+*
+* This header file provides a standardized interface for interacting with
+* DOCSIS devices in Multiple System Operator (MSO) environments.
+*
+* The MSO Management HAL enables key functionalities like:
+*   -  Device provisioning and configuration
+*   - Data model access (reading/writing parameters)
+*   - Event notifications for status changes
+*   - Security management for device interactions
+*
+* By abstracting hardware and protocol specifics, this HAL simplifies
+* management application development for diverse DOCSIS devices.
 */
 
 #ifndef __MSO_MGMT_HAL_H__
@@ -113,16 +123,23 @@ typedef int             boolean;
 /**********************************************************************
                 STRUCTURE DEFINITIONS
 **********************************************************************/
-
+/**! Indicates the result of MSO password validation. */
 typedef enum
 {
-    Invalid_PWD, /**< Password is Invalid. */
-    Good_PWD,    /**< Password is Good. */
-    Unique_PWD,  /**< Password is Unique. */
-    Expired_PWD, /**< Password is Expired. */
-    TimeError    /**< Time error during password validation. */
+    Invalid_PWD, /**!< Password is Invalid. */
+    Good_PWD,    /**!< Password is valid. */
+    Unique_PWD,  /**!< Password is Unique (not previously used). */
+    Expired_PWD, /**!< Password is Expired. */
+    TimeError    /**!< Time-related error occurred during validation. */
 }
 mso_pwd_ret_status;
+
+/*
+* TODO:
+*   - Consider renaming enum values to a more consistent format (e.g., `MSO_PWD_INVALID`, `MSO_PWD_GOOD`, etc.).
+*   - Add a value representing "Unknown" or "Not Validated" for cases where validation hasn't been performed yet.
+*   - Evaluate the need for a "Unique" status; this may be better handled as a separate flag or function.
+*/
 
 /**
  * @}
@@ -133,68 +150,69 @@ mso_pwd_ret_status;
  * @{
  */
 
-
 /*
- * TODO:
- *
- * 1. Extend the return codes by listing out the possible reasons of failure, to improve the interface in the future.
- *    This was reported during the review for header file migration to opensource github.
- *
- */
+* TODO (Error Handling Enhancement - MsoMgmt HAL):
+*   - Replace the generic `RETURN_ERR` with an enumerated error code type for improved clarity and debugging.
+*   - Define specific error codes to pinpoint various failure scenarios, including:
+*       - Invalid input parameters (e.g., null pointers, out-of-range values, invalid MAC addresses)
+*       - Resource allocation failures (e.g., out-of-memory)
+*       - Communication errors with the cable modem or underlying hardware
+*       - Timeout errors when waiting for responses
+*       - File system errors (e.g., file not found, permission denied)
+*       - DOCSIS-specific errors (e.g., ranging failure, registration failure)
+*       - SNMP-related errors (e.g., authentication failure, MIB access issues)
+*       - Firmware update errors (e.g., download failure, invalid image)
+*       - Internal errors within the MsoMgmt HAL
+*   - Document the new error codes thoroughly in the header file and any relevant guides.
+*/
 
- 
-/* mso_validatepwd() function */
-/**
-* @description Validate whether the password passed in matches the password of the day for mso user.
+/**!
+* @brief Validates a password against the current MSO "password of the day."
 *
-* @param[in] pwd - Provided password which is a pointer to a buffer that was preallocated by the caller.
+* This function checks if the provided password matches the valid password set for the MSO user for the current day.
 *
-* @return The validation status of the password (mso_pwd_ret_status).
-* @retval Invalid_PWD if the provided password is invalid.
-* @retval Good_PWD if the provided password is valid.
-* @retval Unique_PWD if the provided password is unique.
-* @retval Expired_PWD if the provided password has expired.
-* @retval TimeError if an error related to time occurred during password validation.
+* @param[in] pwd - The password to be validated (pre-allocated by the caller).
 *
-* @execution Synchronous.
+* @returns Password validation status (`mso_pwd_ret_status`):
+* @retval Invalid_PWD - Password is invalid (does not match the current password of the day).
+* @retval Good_PWD - Password is valid and matches the current password of the day.
+* @retval Expired_PWD - Password has expired.
+* @retval TimeError - A time-related error occurred during validation (e.g., clock synchronization issue).
+*
+* TODO: 
+*  - Consider removing `Unique_PWD` as it may be unrelated to the "password of the day" concept.
+*  - Add a `MSO_PWD_UNKNOWN` or `MSO_PWD_NOT_VALIDATED` value to the enum for cases where validation cannot be performed or hasn't occurred yet.
+*  - Introduce more specific error codes for invalid passwords (e.g., `MSO_PWD_WRONG`, `MSO_PWD_FORMAT_ERROR`).
 */
 mso_pwd_ret_status mso_validatepwd(char *pwd);
 
-/* mso_set_pod_seed : */
-/**
-* @description Sets the PoD seed for mso password validation.
+/**!
+* @brief Sets the "Password of the Day" (PoD) seed for MSO password validation.
 *
-* @param[in] pSeed - PoD seed which is pointer to a buffer that was preallocated by the caller.
-*                    \n The buffer size should be atleast 64 bytes long.
-*                    \n This is where the input is provided.
+* This function configures the seed value used to generate the daily password for MSO users.
 *
-* @return the status of the operation.
-* @retval RETURN_OK if successful.
-* @retval RETURN_ERR if any error is detected.
+* @param[in] pSeed - The PoD seed (pre-allocated buffer, at least 64 bytes).
 *
-* @execution Synchronous.
+* @returns Status of the operation:
+* @retval RETURN_OK - On success.
+* @retval RETURN_ERR - On failure (e.g., invalid seed, decryption error).
 *
-* @note Newer Broadband Devices MUST decrypt the seed on demand when this HAL is called.
+* @note Newer Broadband Devices MUST decrypt the seed on demand when this function is called.
 */
 INT mso_set_pod_seed(char *pSeed);
 
-/* mso_get_pod_seed : */
-/**
-* @description Gets the PoD seed for mso password validation.
+/**!
+* @brief Retrieves the Password of the Day (PoD) seed for MSO password validation.
 *
-* @param[out] pSeed - PoD seed which is pointer to a buffer that was preallocated by the caller.
-*                     \n The buffer size should be atleast 64 bytes long.
-*                     \n This is where the output is written.
+* This function retrieves the decrypted PoD seed from the configuration file or the `rdkbEncryptedClientSeed` SNMP OID.
 *
-* @return the status of the operation.
-* @retval RETURN_OK if successful.
-* @retval RETURN_ERR if any error is detected.
+* @param[out] pSeed - Pre-allocated buffer (at least 64 bytes) to store the retrieved seed. 
 *
-* @execution Synchronous.
+* @returns Status of the operation:
+* @retval RETURN_OK - On success.
+* @retval RETURN_ERR - On failure (e.g., retrieval error, decryption error).
 *
-* @note This function retrieves the decrypted seed set in the Config file 
-*       and SNMP OID rdkbEncryptedClientSeed. pSeed for security reasons MUST be manually
-*       overwritten after use.
+* @note  For security reasons, the `pSeed` buffer MUST be manually overwritten after use.
 */
 INT mso_get_pod_seed(char* pSeed);
 
